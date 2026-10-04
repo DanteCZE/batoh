@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Inventář Postavy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        [v-cloak] { display: none; }
+        
+        /* Stylizace posuvníku */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animace pro modální okna */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        /* Styl pro zóny přesouvání (Drag&Drop) */
+        .drop-zone-active {
+            box-shadow: inset 0 0 0 2px currentColor;
+            border-style: dashed !important;
+        }
+
+        /* Skrytí nativních šipek pro číselná pole (Spinners) pro čistší vzhled */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased pb-20">
+
+    <div id="app" v-cloak class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Horní panel pro správu postav a Import/Export -->
+        <div class="mb-6 bg-slate-900 rounded-2xl p-4 shadow-lg text-white flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2 bg-slate-800 rounded-lg text-indigo-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>
+                
+                <div class="relative flex-1 md:w-48">
+                    <select v-model="activeCharId" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl pl-4 pr-10 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-bold appearance-none cursor-pointer">
+                        <option v-for="c in characters" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
+                    <svg class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+
+                <div class="flex gap-1.5 shrink-0">
+                    <button @click="openCharModal('edit')" class="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors" title="Přejmenovat postavu">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                    <button @click="openCharModal('add')" class="p-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white transition-colors shadow-sm" title="Nová postava">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between w-full md:w-auto gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                <div class="flex gap-1">
+                    <button @click="$refs.fileImport.click()" class="px-3 py-1.5 hover:bg-slate-700 rounded-lg text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5" title="Nahrát postavu ze souboru">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span class="hidden sm:inline">Import</span>
+                    </button>
+                    <input type="file" ref="fileImport" class="hidden" accept=".json" @change="importCharacter">
+                    
+                    <button @click="exportCharacter" class="px-3 py-1.5 hover:bg-slate-700 rounded-lg text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5" title="Uložit postavu do souboru">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span class="hidden sm:inline">Export</span>
+                    </button>
+                </div>
+                
+                <div class="w-px h-5 bg-slate-600 mx-1"></div>
+                
+                <button @click="openDeleteCharModal" :disabled="characters.length <= 1" class="px-3 py-1.5 hover:bg-red-900/60 text-red-400 hover:text-red-300 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed" title="Smazat postavu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hlavička zátěže aktivní postavy -->
+        <header v-if="activeCharacter" class="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-5 w-full">
+            <div class="w-full md:w-auto">
+                <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+                    Inventář: <span class="text-emerald-600">{{ activeCharacter.name }}</span>
+                </h1>
+            </div>
+            
+            <div class="flex items-center justify-between w-full md:w-auto gap-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                <div class="flex items-center gap-3 pl-2">
+                    <label class="font-semibold text-sm text-slate-600 whitespace-nowrap">Nosnost (lb):</label>
+                    <input type="number" v-model.number="activeCharacter.charCapacity" @change="validateCharCapacity" class="w-20 px-2 py-1.5 border border-slate-200 rounded-lg bg-white text-center font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm">
+                </div>
+                <div class="h-8 w-px bg-slate-200 hidden sm:block mx-2"></div>
+                <div class="text-right sm:text-left pr-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-0.5">Aktuální zátěž</span>
+                    <div :class="['text-xl font-black', isEncumbered ? 'text-red-600' : 'text-slate-800']">
+                        {{ totalWeight.toFixed(1) }} / {{ activeCharacter.charCapacity }} lb
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div v-if="activeCharacter" class="flex flex-col gap-6 w-full">
+            
+            <!-- Měšec s penězi -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col w-full">
+                <h2 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Měšec s penězi
+                </h2>
+                
+                <div class="grid grid-cols-3 gap-3 sm:gap-5">
+                    <!-- ZLATÉ -->
+                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-amber-50 to-white rounded-xl border border-amber-200 shadow-sm">
+                        <label class="text-xs font-extrabold text-amber-700 mb-2 tracking-wider">ZLATÉ</label>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
+                            <button @click="changeMoney('zl', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
+                            <input type="number" min="0" v-model.number="activeCharacter.money.zl" @change="validateMoney('zl')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-amber-500 rounded p-1">
+                            <button @click="changeMoney('zl', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
+                        </div>
+                    </div>
+                    <!-- STŘÍBRNÉ -->
+                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-slate-100 to-white rounded-xl border border-slate-300 shadow-sm">
+                        <label class="text-xs font-extrabold text-slate-500 mb-2 tracking-wider">STŘÍBRNÉ</label>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
+                            <button @click="changeMoney('st', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
+                            <input type="number" min="0" v-model.number="activeCharacter.money.st" @change="validateMoney('st')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 rounded p-1">
+                            <button @click="changeMoney('st', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
+                        </div>
+                    </div>
+                    <!-- MĚDĚNÉ -->
+                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-orange-50 to-white rounded-xl border border-orange-200 shadow-sm">
+                        <label class="text-xs font-extrabold text-orange-800 mb-2 tracking-wider">MĚDĚNÉ</label>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
+                            <button @click="changeMoney('md', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
+                            <input type="number" min="0" v-model.number="activeCharacter.money.md" @change="validateMoney('md')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-orange-500 rounded p-1">
+                            <button @click="changeMoney('md', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button @click="openMoneyModal" class="mt-4 w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-sm border border-slate-200">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Přidat / Utratit peníze
+                </button>
+
+                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Hotovost v měšci:</span>
+                        <span class="text-slate-700 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ formatMd(pouchValueMd) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Hodnota předmětů (na prodej):</span>
+                        <span class="text-slate-700 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ formatMd(itemsValueMd) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-base mt-2 pt-3 border-t border-slate-100">
+                        <span class="text-slate-800 font-black uppercase tracking-wide text-sm">Celkové jmění postavy:</span>
+                        <span class="text-amber-600 font-black text-lg drop-shadow-sm">{{ totalInventoryValueFormatted }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tlačítko Přidat Předmět -->
+            <button @click="openAddModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-4 rounded-2xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 text-lg active:scale-95 duration-200 border border-emerald-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Přidat předmět / brašnu
+            </button>
+
+            <!-- Inventář (Postava + Brašny) -->
+            <section class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 relative w-full">
+                <h2 class="text-xl font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    Na postavě a v brašnách
+                </h2>
+                
+                <!-- Prázdný inventář -->
+                <div v-if="activeCharacter.items.length === 0" class="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                    <p class="text-lg font-medium text-slate-500 mb-1">Zatím nic nenesete.</p>
+                    <p class="text-sm">Přidejte předměty pomocí zeleného tlačítka nad tímto panelem.</p>
+                </div>
+
+                <!-- PŘEDMĚTY PŘÍMO NA POSTAVĚ (DROP ZONE) -->
+                <div 
+                    v-show="activeCharacter.items.length > 0"
+                    @dragover.prevent="handleDragOver($event, null)"
+                    @drop.prevent="handleDrop($event, null)"
+                    class="space-y-4 p-2 -mx-2 rounded-xl transition-all duration-200 min-h-[50px] text-emerald-600"
+                    :class="dragOverContainerId === null && draggedItemId !== null ? 'drop-zone-active bg-emerald-50/50' : 'border border-transparent'"
+                >
+                    <div v-if="dragOverContainerId === null && draggedItemId !== null && mainInventorySorted.length === 0" class="h-full flex items-center justify-center font-bold text-emerald-600/50 text-sm">
+                        Upustit na postavu
+                    </div>
+
+                    <ul class="space-y-4">
+                        <li v-for="item in mainInventorySorted" :key="item.id" 
+                            :draggable="!isTouchDevice" 
+                            @dragstart="startDrag($event, item)"
+                            @dragend="endDrag"
+                            class="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl bg-white hover:border-slate-300 transition-all gap-4 shadow-sm" 
+                            :class="[{ 'opacity-50 grayscale bg-slate-50': item.quantity === 0 }, !isTouchDevice ? 'cursor-grab active:cursor-grabbing' : '', draggedItemId === item.id ? 'opacity-30 scale-95 border-emerald-300' : '']">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2.5 flex-wrap">
+                                    <div v-if="!isTouchDevice" class="text-slate-300 mr-1 hidden sm:block" title="Chytit a přesunout"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></div>
+                                    <h3 class="font-bold text-slate-800 text-base break-words">{{ item.name }}</h3>
+                                    
+                                    <!-- Množství s ručním zadáváním -->
+                                    <div class="flex items-center bg-slate-100 rounded-lg border border-slate-200 shadow-inner shrink-0" @mousedown.stop @touchstart.stop>
+                                        <button @click="changeQuantity(item, -1)" type="button" class="px-2.5 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors rounded-l-lg font-bold">&minus;</button>
+                                        <input type="number" v-model.number="item.quantity" @change="validateItemQuantity(item)" class="w-10 text-center bg-transparent font-black text-slate-700 text-sm focus:outline-none focus:bg-white transition-colors py-1">
+                                        <button @click="changeQuantity(item, 1)" type="button" class="px-2.5 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors rounded-r-lg font-bold">&plus;</button>
+                                    </div>
+                                    <span v-if="item.quantity === 0" class="text-[10px] uppercase tracking-wider font-bold text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded shrink-0">Odloženo</span>
+                                </div>
+                                <p v-if="item.note" class="text-sm text-slate-500 mt-1.5 break-words ml-0 sm:ml-8">{{ item.note }}</p>
+                                
+                                <div class="text-xs font-semibold mt-2.5 flex flex-wrap gap-3 ml-0 sm:ml-8">
+                                    <span class="flex items-center gap-1.5 bg-slate-100 text-slate-600 px-2 py-1 rounded-md border border-slate-200">
+                                        <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                                        {{ getDisplayWeight(item) }} lb
+                                    </span>
+                                    <span v-if="item.price" class="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">
+                                        <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        {{ getDisplayPrice(item) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <button @click.stop="openMoveModal(item)" class="p-2 text-slate-500 hover:text-emerald-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-emerald-50 transition shadow-sm" title="Přesunout do brašny">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                </button>
+                                <button @click.stop="openEditModal(item)" class="p-2 text-slate-500 hover:text-blue-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 transition shadow-sm" title="Upravit">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+                                <button @click.stop="deleteItem(item.id)" class="p-2 text-slate-500 hover:text-red-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-red-50 transition shadow-sm" title="Smazat">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- BATOHY A BRAŠNY (DROP ZONES) -->
+                <ul class="space-y-4">
+                    <li v-for="container in containersSorted" :key="container.id" class="border border-indigo-200 bg-indigo-50/30 rounded-2xl p-5 shadow-sm relative mt-4 transition-colors duration-200">
+                        <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-500 rounded-t-2xl"></div>
+
+                        <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-5">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2.5 flex-wrap">
+                                    <h3 class="font-black text-indigo-900 text-lg flex items-center gap-2 break-words">
+                                        <span class="text-2xl">🎒</span> {{ container.name }}
+                                    </h3>
+                                </div>
+                                <p v-if="container.note" class="text-sm text-indigo-800/80 mt-1.5 break-words">{{ container.note }}</p>
+                                
+                                <div class="text-xs font-semibold mt-2.5 flex flex-wrap gap-3">
+                                    <span class="flex items-center gap-1.5 bg-white text-indigo-700 px-2 py-1 rounded-md border border-indigo-200 shadow-sm">
+                                        <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                                        Váha (prázdná): {{ getDisplayWeight(container) }} lb
+                                    </span>
+                                    <span v-if="container.price" class="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-200 shadow-sm">
+                                        <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Cena: {{ getDisplayPrice(container) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 self-end sm:self-start shrink-0">
+                                <button @click="openEditModal(container)" class="p-2 text-indigo-500 hover:text-blue-600 bg-white border border-indigo-200 rounded-lg hover:bg-blue-50 transition shadow-sm" title="Upravit brašnu">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+                                <button @click="deleteItem(container.id)" class="p-2 text-indigo-500 hover:text-red-600 bg-white border border-indigo-200 rounded-lg hover:bg-red-50 transition shadow-sm" title="Smazat brašnu (věci uvnitř propadnou ven na postavu)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- DROP ZONE pro vnitřek brašny -->
+                        <div 
+                            class="bg-white p-3 sm:p-4 rounded-xl border border-indigo-100 shadow-sm mt-3 transition-all duration-200 min-h-[100px] text-indigo-700"
+                            @dragover.prevent="handleDragOver($event, container.id)"
+                            @drop.prevent="handleDrop($event, container.id)"
+                            :class="dragOverContainerId === container.id && draggedItemId !== null ? 'drop-zone-active bg-indigo-50/70' : 'border-indigo-100'"
+                        >
+                            <div class="flex flex-wrap justify-between items-center text-sm font-bold mb-4 border-b border-indigo-50 pb-3 gap-2">
+                                <span class="text-indigo-800 flex items-center gap-1.5 uppercase tracking-wide text-xs">
+                                    <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                    Obsah brašny
+                                </span>
+                                <div class="flex items-center bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
+                                    <span class="text-slate-500 font-medium text-xs mr-2">Váha uvnitř:</span>
+                                    <span :class="getContainerInternalWeight(container.id) > container.maxCapacity ? 'text-red-600 font-black bg-red-100 px-1.5 rounded' : 'text-indigo-700 font-black'">
+                                        {{ getContainerInternalWeight(container.id).toFixed(1) }} / {{ container.maxCapacity }} lb
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="getItemsInContainerSorted(container.id).length === 0" class="text-sm text-slate-400 italic text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 pointer-events-none">
+                                {{ dragOverContainerId === container.id ? 'Upusťte předmět zde' : 'Tato brašna je zatím prázdná' }}
+                            </div>
+                            
+                            <ul v-else class="space-y-3">
+                                <li v-for="item in getItemsInContainerSorted(container.id)" :key="item.id" 
+                                    :draggable="!isTouchDevice" 
+                                    @dragstart="startDrag($event, item)"
+                                    @dragend="endDrag"
+                                    class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border gap-3 transition-all" 
+                                    :class="[item.quantity === 0 ? 'bg-slate-50 border-slate-200 opacity-50 grayscale' : (item.isHung ? 'bg-slate-50/70 border-slate-200' : 'bg-white border-slate-200 hover:border-indigo-300'), !isTouchDevice ? 'cursor-grab active:cursor-grabbing' : '', draggedItemId === item.id ? 'opacity-30 scale-95 border-indigo-300' : '']">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                                            <div v-if="!isTouchDevice" class="text-slate-300 mr-0.5 hidden sm:block" title="Chytit a přesunout"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></div>
+                                            <span class="font-bold text-sm text-slate-800 break-words">{{ item.name }}</span>
+                                            
+                                            <!-- Množství obsahu (ruční) -->
+                                            <div class="flex items-center bg-slate-100 rounded-md border border-slate-200 shadow-inner shrink-0" @mousedown.stop @touchstart.stop>
+                                                <button @click="changeQuantity(item, -1)" type="button" class="px-1.5 py-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors rounded-l-md font-bold text-xs">&minus;</button>
+                                                <input type="number" v-model.number="item.quantity" @change="validateItemQuantity(item)" class="w-8 text-center bg-transparent font-bold text-slate-700 text-xs focus:outline-none focus:bg-white transition-colors py-0.5">
+                                                <button @click="changeQuantity(item, 1)" type="button" class="px-1.5 py-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors rounded-r-md font-bold text-xs">&plus;</button>
+                                            </div>
+                                            <span v-if="item.isHung" class="text-[9px] uppercase tracking-wider font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded shrink-0 border border-slate-300" title="Váha se nepočítá do nosnosti brašny (ale do celkové váhy ano)">Zavěšeno zvenku</span>
+                                            <span v-if="item.quantity === 0" class="text-[9px] uppercase tracking-wider font-bold text-red-500 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded shrink-0">Odloženo</span>
+                                        </div>
+                                        <div class="text-xs text-slate-500 flex gap-2 ml-0 sm:ml-6">
+                                            <span class="font-semibold text-slate-600">{{ getDisplayWeight(item) }} lb</span>
+                                            <span v-if="item.price" class="text-amber-600 font-medium border-l pl-2 border-slate-300">{{ getDisplayPrice(item) }}</span>
+                                        </div>
+                                        <div v-if="item.note" class="text-xs text-slate-400 mt-1 break-words italic ml-0 sm:ml-6">{{ item.note }}</div>
+                                    </div>
+                                    
+                                    <div class="flex items-center gap-2 self-end sm:self-center flex-wrap sm:flex-nowrap shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 w-full sm:w-auto justify-end mt-1 sm:mt-0">
+                                        <label class="flex items-center gap-1.5 text-xs cursor-pointer text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition shadow-sm mr-auto sm:mr-0 select-none">
+                                            <input type="checkbox" v-model="item.isHung" class="rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 w-3.5 h-3.5">
+                                            <span class="font-medium">Zavěsit</span>
+                                        </label>
+                                        <button @click.stop="openMoveModal(item)" class="p-1.5 text-slate-400 hover:text-emerald-600 bg-white border border-slate-200 rounded-lg hover:bg-emerald-50 transition shadow-sm" title="Přesunout jinam">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                        </button>
+                                        <button @click.stop="openEditModal(item)" class="p-1.5 text-slate-400 hover:text-blue-500 bg-white border border-slate-200 rounded-lg hover:bg-blue-50 transition shadow-sm" title="Upravit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        </button>
+                                        <button @click.stop="deleteItem(item.id)" class="p-1.5 text-slate-400 hover:text-red-500 bg-white border border-slate-200 rounded-lg hover:bg-red-50 transition shadow-sm" title="Smazat">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+        </div>
+
+        <!-- Modální okno pro přidání/úpravu předmětu -->
+        <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] animate-[fadeIn_0.2s_ease-out] border border-slate-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2.5">
+                        <span v-if="modalMode === 'add'" class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </span>
+                        <span v-else class="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </span>
+                        {{ modalMode === 'add' ? 'Přidat nový předmět' : 'Upravit předmět' }}
+                    </h3>
+                    <button @click="closeModal" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto custom-scrollbar">
+                    <form @submit.prevent="saveItem" id="itemForm" class="space-y-5 text-left">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Název <span class="text-red-500">*</span></label>
+                            <input type="text" v-model="newItem.name" required placeholder="Např. Léčivý lektvar" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white shadow-inner text-slate-800 font-medium">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Poznámka / Detaily</label>
+                            <input type="text" v-model="newItem.note" placeholder="Např. 2d4+2 léčení..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white shadow-inner text-slate-800">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1.5">Váha 1 ks (lb)</label>
+                                <!-- Tlačítka pro váhu s chytrým krokem -->
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" @click="changeWeight(-1)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-600 font-bold text-xl transition-colors shrink-0">&minus;</button>
+                                    <input type="number" step="0.01" min="0" v-model.number="newItem.weight" @change="validateWeight" class="w-full h-10 text-center border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white shadow-inner font-mono text-slate-800 px-1">
+                                    <button type="button" @click="changeWeight(1)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 font-bold text-xl transition-colors shrink-0">&plus;</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1.5">Hodnota za 1 ks</label>
+                                <input type="text" v-model="newItem.price" placeholder="Např. 50 zl" class="w-full p-3 h-10 mt-[2px] border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white shadow-inner text-slate-800">
+                            </div>
+                        </div>
+
+                        <div v-if="!newItem.isContainer && containersSorted.length > 0" class="pt-5 border-t border-slate-100">
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Kde se předmět nachází?</label>
+                            <div class="relative">
+                                <select v-model="newItem.containerId" class="w-full bg-slate-50 border border-slate-300 text-slate-800 rounded-xl pl-4 pr-10 py-3 outline-none focus:ring-2 focus:ring-emerald-500 font-medium appearance-none cursor-pointer">
+                                    <option :value="null">🛡️ Přímo na postavě</option>
+                                    <option v-for="c in containersSorted" :key="c.id" :value="c.id">🎒 {{ c.name }}</option>
+                                </select>
+                                <svg class="w-5 h-5 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+
+                        <div class="pt-5 border-t border-slate-100">
+                            <label class="flex items-start gap-3 cursor-pointer p-4 rounded-xl border-2 transition-colors" :class="newItem.isContainer ? 'bg-indigo-50/50 border-indigo-400 shadow-sm' : 'hover:bg-slate-50 border-slate-200'">
+                                <div class="mt-0.5 flex-shrink-0">
+                                    <input type="checkbox" v-model="newItem.isContainer" :disabled="modalMode === 'edit' && newItem.id && getItemsInContainerSorted(newItem.id).length > 0" class="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer disabled:opacity-50">
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-slate-800">Tento předmět je Brašna / Batoh</span>
+                                    <span class="text-xs text-slate-500 mt-1 leading-relaxed">Slouží jako kontejner, do kterého můžete přesunout další věci.</span>
+                                    <span v-if="modalMode === 'edit' && newItem.id && getItemsInContainerSorted(newItem.id).length > 0" class="text-xs text-red-600 font-bold mt-2 bg-red-50 p-2 rounded-lg border border-red-100">Nelze zrušit, brašna stále obsahuje předměty. Nejprve je vyndejte.</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div v-if="newItem.isContainer" class="p-5 bg-white border-2 border-indigo-100 rounded-xl mt-2 shadow-sm relative overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>
+                            <label class="block text-sm font-bold text-indigo-900 mb-2">Maximální nosnost brašny (lb) <span class="text-red-500">*</span></label>
+                            <input type="number" step="0.1" min="0" v-model.number="newItem.maxCapacity" required placeholder="Např. 30" class="w-full p-3 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono bg-indigo-50/30 text-indigo-900 font-bold">
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="closeModal" type="button" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
+                    <button type="submit" form="itemForm" class="px-6 py-2.5 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition shadow-md active:scale-95 flex items-center gap-2 border border-emerald-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        {{ modalMode === 'add' ? 'Uložit do inventáře' : 'Uložit změny' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno pro Přesun předmětu (Tlačítka) -->
+        <div v-if="isMoveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2.5">
+                        <span class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        </span>
+                        Kam přesunout?
+                    </h3>
+                    <button @click="closeMoveModal" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="p-5 text-left max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <p class="text-sm text-slate-600 mb-5 font-medium break-words leading-relaxed">Vyberte nové umístění pro <strong class="text-slate-900 border-b border-slate-300 pb-0.5">{{ itemToMove?.name }}</strong>:</p>
+                    
+                    <div class="space-y-3">
+                        <button 
+                            @click="moveItemTo(null)" 
+                            :disabled="itemToMove?.containerId === null"
+                            class="w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left group"
+                            :class="itemToMove?.containerId === null ? 'bg-emerald-50/50 border-emerald-200 cursor-not-allowed' : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md hover:bg-emerald-50/30'"
+                        >
+                            <span class="flex items-center gap-3 font-bold text-slate-700 group-hover:text-emerald-700">
+                                <span class="text-2xl drop-shadow-sm">🛡️</span> Přímo na postavu
+                            </span>
+                            <div v-if="itemToMove?.containerId === null" class="bg-emerald-100 p-1 rounded-full text-emerald-600">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                        </button>
+
+                        <div v-if="containersSorted.length > 0" class="flex items-center gap-3 pt-3 pb-2 opacity-60">
+                            <div class="h-px bg-slate-300 flex-1"></div>
+                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Do brašny</span>
+                            <div class="h-px bg-slate-300 flex-1"></div>
+                        </div>
+
+                        <template v-for="c in containersSorted" :key="c.id">
+                            <button 
+                                v-if="c.id !== itemToMove?.id"
+                                @click="moveItemTo(c.id)" 
+                                :disabled="c.id === itemToMove?.containerId"
+                                class="w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left group"
+                                :class="c.id === itemToMove?.containerId ? 'bg-indigo-50/50 border-indigo-200 cursor-not-allowed' : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-md hover:bg-indigo-50/30'"
+                            >
+                                <span class="flex items-center gap-3 font-bold text-slate-700 group-hover:text-indigo-700 truncate pr-2">
+                                    <span class="text-2xl drop-shadow-sm">🎒</span> <span class="truncate">{{ c.name }}</span>
+                                </span>
+                                <div v-if="c.id === itemToMove?.containerId" class="bg-indigo-100 p-1 rounded-full text-indigo-600 shrink-0">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-2xl">
+                    <button @click="closeMoveModal" type="button" class="px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm w-full">Zrušit a zavřít</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno Postava -->
+        <div v-if="isCharModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-extrabold text-lg text-slate-800">
+                        {{ charModalMode === 'add' ? 'Vytvořit novou postavu' : 'Přejmenovat postavu' }}
+                    </h3>
+                </div>
+                <div class="p-5">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Jméno postavy <span class="text-red-500">*</span></label>
+                    <input type="text" v-model="charModalName" @keyup.enter="saveCharacter" placeholder="Např. Gandalf" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white shadow-inner font-medium text-slate-800">
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="isCharModalOpen = false" type="button" class="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
+                    <button @click="saveCharacter" type="button" class="px-5 py-2 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition shadow-sm">Uložit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno Potvrzení smazání postavy -->
+        <div v-if="isDeleteCharModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-red-200">
+                <div class="px-5 py-4 border-b border-red-100 bg-red-50 flex items-center gap-3">
+                    <div class="p-2 bg-red-100 text-red-600 rounded-full">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <h3 class="font-extrabold text-lg text-red-800">Smazat postavu?</h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-slate-600">Opravdu chcete nenávratně smazat postavu <strong class="text-slate-900">{{ activeCharacter?.name }}</strong> a veškerý její inventář?</p>
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="isDeleteCharModalOpen = false" type="button" class="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
+                    <button @click="confirmDeleteCharacter" type="button" class="px-5 py-2 text-sm font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-sm">Ano, smazat</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno Kalkulačky peněz -->
+        <div v-if="isMoneyModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Kalkulačka měšce
+                    </h3>
+                    <button @click="closeMoneyModal" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="p-5">
+                    <div class="flex bg-slate-100 p-1 rounded-xl mb-5 border border-slate-200">
+                        <button @click="moneyTransaction.type = 'add'" class="flex-1 py-2 font-bold text-sm rounded-lg transition-colors" :class="moneyTransaction.type === 'add' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Přidat zisk</button>
+                        <button @click="moneyTransaction.type = 'sub'" class="flex-1 py-2 font-bold text-sm rounded-lg transition-colors" :class="moneyTransaction.type === 'sub' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Zadat útratu</button>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-amber-700 mb-1 text-center">ZL</label>
+                            <input type="number" min="0" v-model.number="moneyTransaction.zl" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-slate-800 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-slate-500 mb-1 text-center">ST</label>
+                            <input type="number" min="0" v-model.number="moneyTransaction.st" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 font-bold text-slate-800 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-orange-800 mb-1 text-center">MD</label>
+                            <input type="number" min="0" v-model.number="moneyTransaction.md" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 font-bold text-slate-800 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="closeMoneyModal" type="button" class="px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
+                    <button @click="executeMoneyTransaction" type="button" class="px-5 py-2.5 text-sm font-bold text-white rounded-xl transition shadow-sm flex items-center gap-2" :class="moneyTransaction.type === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'">
+                        {{ moneyTransaction.type === 'add' ? 'Přidat do měšce' : 'Odečíst z měšce' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chybové okno -->
+        <div v-if="isErrorModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
+                <div class="px-5 py-4 border-b border-orange-100 bg-orange-50 flex items-center gap-3">
+                    <h3 class="font-extrabold text-lg text-orange-800">Upozornění</h3>
+                </div>
+                <div class="p-5 text-slate-700 font-medium">{{ errorMessage }}</div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                    <button @click="isErrorModalOpen = false" type="button" class="px-5 py-2 text-sm font-bold bg-slate-200 text-slate-800 rounded-xl hover:bg-slate-300 transition">Rozumím</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    characters: [],
+                    activeCharId: null,
+                    
+                    isModalOpen: false,
+                    modalMode: 'add',
+                    newItem: {
+                        id: null, name: '', note: '', weight: 0, price: '',
+                        isContainer: false, maxCapacity: 30, containerId: null, isHung: false, quantity: 1
+                    },
+
+                    isMoveModalOpen: false,
+                    itemToMove: null,
+
+                    isCharModalOpen: false,
+                    charModalMode: 'add',
+                    charModalName: '',
+
+                    isDeleteCharModalOpen: false,
+                    
+                    isMoneyModalOpen: false,
+                    moneyTransaction: { type: 'add', zl: 0, st: 0, md: 0 },
+
+                    isErrorModalOpen: false,
+                    errorMessage: '',
+
+                    isTouchDevice: false,
+                    draggedItemId: null,
+                    dragOverContainerId: false
+                }
+            },
+            computed: {
+                activeCharacter() {
+                    if (this.characters.length === 0) return null;
+                    return this.characters.find(c => c.id === this.activeCharId) || this.characters[0];
+                },
+                totalWeight() {
+                    if (!this.activeCharacter) return 0;
+                    return this.activeCharacter.items.reduce((sum, item) => {
+                        if (item.isContainer) {
+                            // Batohy nemají quantity, vždy se počítají jako 1 ks s plnou váhou samotného batohu
+                            return sum + (Number(item.weight) || 0);
+                        } else {
+                            let qty = item.quantity !== undefined ? item.quantity : 1;
+                            if (qty === 0) return sum; 
+                            
+                            // Váha normálního předmětu
+                            return sum + (Number(item.weight) || 0) * qty;
+                        }
+                    }, 0);
+                },
+                isEncumbered() {
+                    if (!this.activeCharacter) return false;
+                    return this.totalWeight > this.activeCharacter.charCapacity;
+                },
+                containersSorted() {
+                    if (!this.activeCharacter) return [];
+                    return this.activeCharacter.items
+                        .filter(item => item.isContainer)
+                        .sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+                },
+                mainInventorySorted() {
+                    if (!this.activeCharacter) return [];
+                    return this.activeCharacter.items
+                        .filter(item => !item.isContainer && item.containerId === null)
+                        .sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+                },
+                pouchValueMd() {
+                    if (!this.activeCharacter) return 0;
+                    const money = this.activeCharacter.money;
+                    return (Number(money.zl) || 0) * 100 + (Number(money.st) || 0) * 10 + (Number(money.md) || 0);
+                },
+                itemsValueMd() {
+                    if (!this.activeCharacter) return 0;
+                    let total = 0;
+                    for (const item of this.activeCharacter.items) {
+                        if (item.isContainer) {
+                            const md = this.parseToMd(item.price);
+                            if (md !== null) total += md;
+                        } else {
+                            let qty = item.quantity !== undefined ? item.quantity : 1;
+                            if (qty === 0) continue; 
+                            const md = this.parseToMd(item.price);
+                            if (md !== null) total += md * qty;
+                        }
+                    }
+                    return total;
+                },
+                totalInventoryValueFormatted() {
+                    return this.formatMd(this.pouchValueMd + this.itemsValueMd);
+                }
+            },
+            watch: {
+                characters: { handler: 'saveToStorage', deep: true },
+                activeCharId: 'saveToStorage',
+                'newItem.isContainer': function(newVal) {
+                    if (newVal) {
+                        this.newItem.containerId = null;
+                    }
+                }
+            },
+            methods: {
+                generateId() {
+                    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+                },
+                showError(msg) {
+                    this.errorMessage = msg;
+                    this.isErrorModalOpen = true;
+                },
+                
+                parseToMd(priceStr) {
+                    if (!priceStr) return null;
+                    let normalized = priceStr.toString().toLowerCase().replace(/,/g, '.');
+                    let totalMd = 0;
+                    let matchedSomething = false;
+                    const regex = /([\d.]+)\s*(zl|st|md)/g;
+                    let match;
+                    while ((match = regex.exec(normalized)) !== null) {
+                        matchedSomething = true;
+                        const val = parseFloat(match[1]);
+                        if (!isNaN(val)) {
+                            if (match[2] === 'zl') totalMd += val * 100;
+                            else if (match[2] === 'st') totalMd += val * 10;
+                            else if (match[2] === 'md') totalMd += val;
+                        }
+                    }
+                    return matchedSomething ? Math.round(totalMd) : null;
+                },
+                formatMd(totalMd) {
+                    if (totalMd === 0) return '0 md';
+                    let zl = Math.floor(totalMd / 100);
+                    let rem = totalMd % 100;
+                    let st = Math.floor(rem / 10);
+                    let md = Math.round(rem % 10);
+                    
+                    let parts = [];
+                    if (zl > 0) parts.push(`${zl} zl`);
+                    if (st > 0) parts.push(`${st} st`);
+                    if (md > 0) parts.push(`${md} md`);
+                    return parts.join(' ');
+                },
+                
+                getDisplayWeight(item) {
+                    const qty = item.isContainer ? 1 : (item.quantity !== undefined ? item.quantity : 1);
+                    const totalWeight = (Number(item.weight) || 0) * qty;
+                    return totalWeight % 1 !== 0 ? totalWeight.toFixed(2).replace(/\.?0+$/, '') : totalWeight;
+                },
+                getDisplayPrice(item) {
+                    if (!item.price) return '';
+                    const qty = item.isContainer ? 1 : (item.quantity !== undefined ? item.quantity : 1);
+                    const priceInMd = this.parseToMd(item.price);
+                    
+                    if (priceInMd !== null) {
+                        return this.formatMd(priceInMd * qty);
+                    }
+                    
+                    const match = item.price.toString().trim().match(/^([\d.,]+)\s*(.*)$/);
+                    if (match) {
+                        let num = parseFloat(match[1].replace(',', '.'));
+                        if (!isNaN(num)) {
+                            let total = num * qty;
+                            let formatted = total % 1 !== 0 ? total.toFixed(2).replace(/\.?0+$/, '') : total;
+                            return match[2] ? `${formatted} ${match[2]}` : `${formatted}`;
+                        }
+                    }
+                    return item.price;
+                },
+                
+                changeMoney(type, delta) {
+                    if (!this.activeCharacter) return;
+                    let current = Number(this.activeCharacter.money[type]) || 0;
+                    let newVal = current + delta;
+                    if (newVal >= 0) {
+                        this.activeCharacter.money[type] = newVal;
+                    }
+                },
+                validateMoney(type) {
+                    if (!this.activeCharacter) return;
+                    let val = this.activeCharacter.money[type];
+                    if (val === '' || val === null || isNaN(val) || val < 0) {
+                        this.activeCharacter.money[type] = 0;
+                    } else {
+                        this.activeCharacter.money[type] = Math.floor(val);
+                    }
+                },
+
+                openMoneyModal() {
+                    this.moneyTransaction = { type: 'add', zl: 0, st: 0, md: 0 };
+                    this.isMoneyModalOpen = true;
+                },
+                closeMoneyModal() {
+                    this.isMoneyModalOpen = false;
+                },
+                executeMoneyTransaction() {
+                    if (!this.activeCharacter) return;
+                    
+                    const currentTotal = this.pouchValueMd;
+                    const transactionTotal = (Number(this.moneyTransaction.zl) || 0) * 100 +
+                                             (Number(this.moneyTransaction.st) || 0) * 10 +
+                                             (Number(this.moneyTransaction.md) || 0);
+                    
+                    if (transactionTotal === 0) {
+                        this.closeMoneyModal();
+                        return;
+                    }
+
+                    if (this.moneyTransaction.type === 'sub' && transactionTotal > currentTotal) {
+                        this.showError("Nemáte dostatek peněz v měšci na tuto útratu.");
+                        return;
+                    }
+
+                    let newTotal = this.moneyTransaction.type === 'add' ? currentTotal + transactionTotal : currentTotal - transactionTotal;
+                    
+                    this.activeCharacter.money.zl = Math.floor(newTotal / 100);
+                    let rem = newTotal % 100;
+                    this.activeCharacter.money.st = Math.floor(rem / 10);
+                    this.activeCharacter.money.md = Math.round(rem % 10);
+                    
+                    this.closeMoneyModal();
+                },
+
+                validateCharCapacity() {
+                    if (!this.activeCharacter) return;
+                    let val = this.activeCharacter.charCapacity;
+                    if (val === '' || val === null || isNaN(val) || val <= 0) {
+                        this.activeCharacter.charCapacity = 150; // fallback default
+                    }
+                },
+
+                changeQuantity(item, delta) {
+                    if (item.quantity === undefined) item.quantity = 1;
+                    const newQty = (Number(item.quantity) || 0) + delta;
+                    if (newQty >= 0) {
+                        item.quantity = newQty;
+                        // Chytrý převod peněz po zvýšení na 1 z 0
+                        const priceInMd = this.parseToMd(item.price);
+                        if (priceInMd !== null && item.quantity === 1) {
+                            item.price = this.formatMd(priceInMd);
+                        }
+                    }
+                },
+                validateItemQuantity(item) {
+                    if (item.quantity === '' || item.quantity === null || isNaN(item.quantity) || item.quantity < 0) {
+                        item.quantity = 0;
+                    } else {
+                        item.quantity = Math.floor(Number(item.quantity));
+                        const priceInMd = this.parseToMd(item.price);
+                        if (priceInMd !== null && item.quantity === 1) {
+                            item.price = this.formatMd(priceInMd);
+                        }
+                    }
+                },
+
+                changeWeight(dir) {
+                    let w = Number(this.newItem.weight) || 0;
+                    if (dir === 1) { // plus
+                        if (w < 0.5) w = 0.5;
+                        else if (w < 1) w = 1;
+                        else w = Math.floor(w) + 1;
+                    } else { // mínus
+                        if (w <= 0) w = 0;
+                        else if (w <= 0.5) w = 0;
+                        else if (w <= 1) w = 0.5;
+                        else w = Math.ceil(w) - 1;
+                    }
+                    this.newItem.weight = w;
+                },
+                validateWeight() {
+                    let w = Number(this.newItem.weight);
+                    if (isNaN(w) || w < 0) {
+                        this.newItem.weight = 0;
+                    }
+                },
+
+                openAddModal() {
+                    this.modalMode = 'add';
+                    this.newItem = {
+                        id: null, name: '', note: '', weight: 0, price: '',
+                        isContainer: false, maxCapacity: 30, containerId: null, isHung: false, quantity: 1
+                    };
+                    this.isModalOpen = true;
+                },
+                openEditModal(item) {
+                    this.modalMode = 'edit';
+                    this.newItem = JSON.parse(JSON.stringify(item));
+                    this.isModalOpen = true;
+                },
+                closeModal() {
+                    this.isModalOpen = false;
+                },
+                openMoveModal(item) {
+                    this.itemToMove = item;
+                    this.isMoveModalOpen = true;
+                },
+                closeMoveModal() {
+                    this.isMoveModalOpen = false;
+                    this.itemToMove = null;
+                },
+                moveItemTo(targetContainerId) {
+                    if (this.itemToMove && this.activeCharacter) {
+                        const index = this.activeCharacter.items.findIndex(i => i.id === this.itemToMove.id);
+                        if (index !== -1) {
+                            this.activeCharacter.items[index].containerId = targetContainerId;
+                            if (targetContainerId === null) {
+                                this.activeCharacter.items[index].isHung = false;
+                            }
+                        }
+                    }
+                    this.closeMoveModal();
+                },
+                
+                saveItem() {
+                    if (!this.newItem.name.trim() || !this.activeCharacter) return;
+                    if (this.newItem.isContainer) this.newItem.containerId = null;
+
+                    if (this.modalMode === 'add') {
+                        const item = {
+                            id: this.generateId(),
+                            name: this.newItem.name.trim(),
+                            note: this.newItem.note.trim(),
+                            weight: Number(this.newItem.weight) || 0,
+                            price: this.newItem.price.trim(),
+                            isContainer: this.newItem.isContainer,
+                            maxCapacity: this.newItem.isContainer ? (Number(this.newItem.maxCapacity) || 0) : 0,
+                            containerId: this.newItem.containerId,
+                            isHung: false,
+                            quantity: 1
+                        };
+                        this.activeCharacter.items.push(item);
+                    } else if (this.modalMode === 'edit') {
+                        const index = this.activeCharacter.items.findIndex(i => i.id === this.newItem.id);
+                        if (index !== -1) {
+                            const currentItem = this.activeCharacter.items[index];
+                            currentItem.name = this.newItem.name.trim();
+                            currentItem.note = this.newItem.note.trim();
+                            currentItem.weight = Number(this.newItem.weight) || 0;
+                            currentItem.price = this.newItem.price.trim();
+                            currentItem.isContainer = this.newItem.isContainer;
+                            currentItem.maxCapacity = this.newItem.isContainer ? (Number(this.newItem.maxCapacity) || 0) : 0;
+                            currentItem.containerId = this.newItem.containerId;
+                            
+                            if (this.newItem.containerId === null) currentItem.isHung = false;
+                            
+                            if (!this.newItem.isContainer) {
+                                this.activeCharacter.items.forEach(i => {
+                                    if (i.containerId === this.newItem.id) {
+                                        i.containerId = null;
+                                        i.isHung = false;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    this.closeModal();
+                },
+                deleteItem(id) {
+                    if (!this.activeCharacter) return;
+                    const itemToDelete = this.activeCharacter.items.find(i => i.id === id);
+                    if (itemToDelete && itemToDelete.isContainer) {
+                        this.activeCharacter.items.forEach(i => {
+                            if (i.containerId === id) {
+                                i.containerId = null;
+                                i.isHung = false;
+                            }
+                        });
+                    }
+                    this.activeCharacter.items = this.activeCharacter.items.filter(i => i.id !== id);
+                },
+                getItemsInContainerSorted(containerId) {
+                    if (!this.activeCharacter) return [];
+                    return this.activeCharacter.items
+                        .filter(i => i.containerId === containerId)
+                        .sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+                },
+                getContainerInternalWeight(containerId) {
+                    if (!this.activeCharacter) return 0;
+                    return this.activeCharacter.items
+                        .filter(i => i.containerId === containerId && !i.isHung)
+                        .reduce((sum, i) => sum + (Number(i.weight) || 0) * (i.quantity !== undefined ? i.quantity : 1), 0);
+                },
+
+                startDrag(event, item) {
+                    if (this.isTouchDevice) return;
+                    this.draggedItemId = item.id;
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', item.id);
+                },
+                endDrag() {
+                    this.draggedItemId = null;
+                    this.dragOverContainerId = false;
+                },
+                handleDragOver(event, containerId) {
+                    if (!this.draggedItemId) return;
+                    event.preventDefault();
+                    this.dragOverContainerId = containerId;
+                },
+                handleDrop(event, containerId) {
+                    if (!this.draggedItemId) return;
+                    event.preventDefault();
+                    
+                    const item = this.activeCharacter.items.find(i => i.id === this.draggedItemId);
+                    if (item && item.id !== containerId) {
+                        item.containerId = containerId;
+                        if (containerId === null) item.isHung = false;
+                    }
+                    
+                    this.draggedItemId = null;
+                    this.dragOverContainerId = false;
+                },
+
+                openCharModal(mode) {
+                    this.charModalMode = mode;
+                    if (mode === 'edit' && this.activeCharacter) {
+                        this.charModalName = this.activeCharacter.name;
+                    } else {
+                        this.charModalName = '';
+                    }
+                    this.isCharModalOpen = true;
+                },
+                saveCharacter() {
+                    const name = this.charModalName.trim();
+                    if (!name) {
+                        this.showError("Jméno postavy nesmí být prázdné.");
+                        return;
+                    }
+                    
+                    if (this.charModalMode === 'add') {
+                        const newChar = {
+                            id: this.generateId(),
+                            name: name,
+                            charCapacity: 150,
+                            money: { zl: 0, st: 0, md: 0 },
+                            items: []
+                        };
+                        this.characters.push(newChar);
+                        this.activeCharId = newChar.id;
+                    } else if (this.charModalMode === 'edit' && this.activeCharacter) {
+                        this.activeCharacter.name = name;
+                    }
+                    this.isCharModalOpen = false;
+                },
+                openDeleteCharModal() {
+                    this.isDeleteCharModalOpen = true;
+                },
+                confirmDeleteCharacter() {
+                    this.characters = this.characters.filter(c => c.id !== this.activeCharId);
+                    if (this.characters.length > 0) {
+                        this.activeCharId = this.characters[0].id;
+                    }
+                    this.isDeleteCharModalOpen = false;
+                },
+
+                exportCharacter() {
+                    if (!this.activeCharacter) return;
+                    const charCopy = JSON.parse(JSON.stringify(this.activeCharacter));
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(charCopy, null, 2));
+                    
+                    const a = document.createElement('a');
+                    a.setAttribute("href", dataStr);
+                    const safeName = charCopy.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    a.setAttribute("download", `dnd_${safeName}_inventar.json`);
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                },
+                importCharacter(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedChar = JSON.parse(e.target.result);
+                            
+                            if (!importedChar.name || !Array.isArray(importedChar.items)) {
+                                this.showError("Zvolený soubor není platný D&D inventář.");
+                                return;
+                            }
+                            
+                            importedChar.id = this.generateId();
+                            importedChar.charCapacity = importedChar.charCapacity || 150;
+                            importedChar.money = importedChar.money || { zl: 0, st: 0, md: 0 };
+                            
+                            this.characters.push(importedChar);
+                            this.activeCharId = importedChar.id;
+                            
+                        } catch (err) {
+                            this.showError("Nepodařilo se přečíst soubor. Je možné, že je poškozený.");
+                        }
+                        event.target.value = '';
+                    };
+                    reader.readAsText(file);
+                },
+                
+                saveToStorage() {
+                    if (this.characters.length === 0) return;
+                    const dataToSave = {
+                        characters: this.characters,
+                        activeCharId: this.activeCharId
+                    };
+                    localStorage.setItem('dnd_inventory_state_v3', JSON.stringify(dataToSave));
+                },
+                loadFromStorage() {
+                    const savedData3 = localStorage.getItem('dnd_inventory_state_v3');
+                    if (savedData3) {
+                        try {
+                            const parsed = JSON.parse(savedData3);
+                            this.characters = parsed.characters;
+                            this.characters.forEach(char => {
+                                if(char.items) {
+                                    char.items.forEach(i => {
+                                        if(i.quantity === undefined) i.quantity = 1;
+                                    });
+                                }
+                            });
+                            this.activeCharId = parsed.activeCharId;
+                            if (!this.characters.find(c => c.id === this.activeCharId) && this.characters.length > 0) {
+                                this.activeCharId = this.characters[0].id;
+                            }
+                            return;
+                        } catch(e) { console.error(e); }
+                    }
+
+                    // Zpětná kompatibilita pro staré verze
+                    const oldData = localStorage.getItem('dnd_inventory_state_v2') || localStorage.getItem('dnd_inventory_state');
+                    if (oldData) {
+                        try {
+                            const parsed = JSON.parse(oldData);
+                            const migratedChar = {
+                                id: this.generateId(),
+                                name: 'Hlavní postava',
+                                charCapacity: parsed.charCapacity || 150,
+                                money: parsed.money || { zl: 0, st: 0, md: 0 },
+                                items: (parsed.items || []).map(i => ({...i, quantity: i.quantity !== undefined ? i.quantity : 1}))
+                            };
+                            this.characters = [migratedChar];
+                            this.activeCharId = migratedChar.id;
+                            
+                            localStorage.removeItem('dnd_inventory_state_v2');
+                            localStorage.removeItem('dnd_inventory_state');
+                            return;
+                        } catch(e) { console.error(e); }
+                    }
+
+                    const defaultChar = {
+                        id: this.generateId(),
+                        name: 'Nová postava',
+                        charCapacity: 150,
+                        money: { zl: 0, st: 0, md: 0 },
+                        items: []
+                    };
+                    this.characters = [defaultChar];
+                    this.activeCharId = defaultChar.id;
+                }
+            },
+            mounted() {
+                this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+                this.loadFromStorage();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
