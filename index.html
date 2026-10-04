@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Inventář Postavy</title>
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Spravujte inventář, nosnost a měšec svých D&D postav.">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
@@ -1178,6 +1183,15 @@
                 this.loadFromStorage();
             }
         }).mount('#app');
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((error) => {
+                    console.error('Nepodařilo se zaregistrovat service worker:', error);
+                });
+            });
+        }
     </script>
 </body>
 </html>
