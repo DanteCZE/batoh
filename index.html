@@ -94,21 +94,19 @@
             </div>
         </div>
 
-        <!-- Hlavička zátěže aktivní postavy -->
+        <!-- Hlavička aktivní postavy -->
         <header v-if="activeCharacter" class="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-5 w-full">
-            <div class="w-full md:w-auto">
+            <div class="w-full md:w-auto flex items-center justify-between gap-3">
                 <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
                     Inventář: <span class="text-emerald-600">{{ activeCharacter.name }}</span>
                 </h1>
+                <button @click="openSettingsModal" type="button" class="shrink-0 p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 transition-colors" title="Nastavení" aria-label="Nastavení">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317a1.724 1.724 0 013.35 0 1.724 1.724 0 002.573 1.006 1.724 1.724 0 012.9 1.675 1.724 1.724 0 001.006 2.573 1.724 1.724 0 010 3.35 1.724 1.724 0 00-1.006 2.573 1.724 1.724 0 01-1.675 2.9 1.724 1.724 0 00-2.573 1.006 1.724 1.724 0 01-3.35 0 1.724 1.724 0 00-2.573-1.006 1.724 1.724 0 01-2.9-1.675 1.724 1.724 0 00-1.006-2.573 1.724 1.724 0 010-3.35 1.724 1.724 0 001.006-2.573 1.724 1.724 0 011.675-2.9 1.724 1.724 0 002.573-1.006z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
             </div>
             
             <div class="flex items-center justify-between w-full md:w-auto gap-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="flex items-center gap-3 pl-2">
-                    <label class="font-semibold text-sm text-slate-600 whitespace-nowrap">Nosnost (lb):</label>
-                    <input type="number" v-model.number="activeCharacter.charCapacity" @change="validateCharCapacity" class="w-20 px-2 py-1.5 border border-slate-200 rounded-lg bg-white text-center font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm">
-                </div>
-                <div class="h-8 w-px bg-slate-200 hidden sm:block mx-2"></div>
-                <div class="text-right sm:text-left pr-2">
+                <div class="text-right sm:text-left px-2">
                     <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-0.5">Aktuální zátěž</span>
                     <div :class="['text-xl font-black', isEncumbered ? 'text-red-600' : 'text-slate-800']">
                         {{ totalWeight.toFixed(1) }} / {{ activeCharacter.charCapacity }} lb
@@ -126,55 +124,23 @@
                     Měšec s penězi
                 </h2>
                 
-                <div class="grid grid-cols-3 gap-3 sm:gap-5">
-                    <!-- ZLATÉ -->
-                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-amber-50 to-white rounded-xl border border-amber-200 shadow-sm">
-                        <label class="text-xs font-extrabold text-amber-700 mb-2 tracking-wider">ZLATÉ</label>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
-                            <button @click="changeMoney('zl', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
-                            <input type="number" min="0" v-model.number="activeCharacter.money.zl" @change="validateMoney('zl')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-amber-500 rounded p-1">
-                            <button @click="changeMoney('zl', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
-                        </div>
-                    </div>
-                    <!-- STŘÍBRNÉ -->
-                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-slate-100 to-white rounded-xl border border-slate-300 shadow-sm">
-                        <label class="text-xs font-extrabold text-slate-500 mb-2 tracking-wider">STŘÍBRNÉ</label>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
-                            <button @click="changeMoney('st', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
-                            <input type="number" min="0" v-model.number="activeCharacter.money.st" @change="validateMoney('st')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 rounded p-1">
-                            <button @click="changeMoney('st', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
-                        </div>
-                    </div>
-                    <!-- MĚDĚNÉ -->
-                    <div class="flex flex-col items-center p-3 bg-gradient-to-b from-orange-50 to-white rounded-xl border border-orange-200 shadow-sm">
-                        <label class="text-xs font-extrabold text-orange-800 mb-2 tracking-wider">MĚDĚNÉ</label>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 w-full">
-                            <button @click="changeMoney('md', 1)" class="order-1 sm:order-3 w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold leading-none shrink-0 transition-colors">&plus;</button>
-                            <input type="number" min="0" v-model.number="activeCharacter.money.md" @change="validateMoney('md')" class="order-2 w-full sm:w-16 text-center bg-transparent font-black text-2xl text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-orange-500 rounded p-1">
-                            <button @click="changeMoney('md', -1)" class="order-3 sm:order-1 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold leading-none shrink-0 transition-colors">&minus;</button>
-                        </div>
-                    </div>
+                <div class="rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white px-5 py-6 text-center shadow-sm">
+                    <span class="block text-xs font-extrabold uppercase tracking-widest text-amber-700">Hotovost v měšci</span>
+                    <span class="mt-2 block text-3xl sm:text-4xl font-black tracking-tight text-slate-800">{{ formatMd(pouchValueMd) }}</span>
                 </div>
                 
-                <button @click="openMoneyModal" class="mt-4 w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-sm border border-slate-200">
-                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    Přidat / Utratit peníze
-                </button>
-
-                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-500 font-medium">Hotovost v měšci:</span>
-                        <span class="text-slate-700 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ formatMd(pouchValueMd) }}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-500 font-medium">Hodnota předmětů (na prodej):</span>
-                        <span class="text-slate-700 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ formatMd(itemsValueMd) }}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-base mt-2 pt-3 border-t border-slate-100">
-                        <span class="text-slate-800 font-black uppercase tracking-wide text-sm">Celkové jmění postavy:</span>
-                        <span class="text-amber-600 font-black text-lg drop-shadow-sm">{{ totalInventoryValueFormatted }}</span>
-                    </div>
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <button @click="openMoneyModal('add')" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                        <span class="text-lg leading-none">&plus;</span> Zisk
+                    </button>
+                    <button @click="openMoneyModal('sub')" type="button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                        <span class="text-lg leading-none">&minus;</span> Platba
+                    </button>
                 </div>
+
+                <button @click="isMoneyDetailsModalOpen = true" type="button" class="mt-3 w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm border border-slate-200">
+                    Podrobnosti
+                </button>
             </section>
 
             <!-- Tlačítko Přidat Předmět -->
@@ -399,7 +365,7 @@
                             <input type="text" v-model="newItem.note" placeholder="Např. 2d4+2 léčení..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white shadow-inner text-slate-800">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-5">
+                        <div class="space-y-5">
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1.5">Váha 1 ks (lb)</label>
                                 <!-- Tlačítka pro váhu s chytrým krokem -->
@@ -411,7 +377,39 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1.5">Hodnota za 1 ks</label>
-                                <input type="text" v-model="newItem.price" placeholder="Např. 50 zl" class="w-full p-3 h-10 mt-[2px] border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white shadow-inner text-slate-800">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div v-for="coin in [{ key: 'zl', label: 'ZL' }, { key: 'st', label: 'ST' }, { key: 'md', label: 'MD' }]" :key="coin.key" class="flex items-center justify-between gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1.5">
+                                        <button @click="changeItemPrice(coin.key, -1)" type="button" class="w-8 h-9 shrink-0 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold" :aria-label="`Snížit hodnotu o 1 ${coin.label}`">&minus;</button>
+                                        <div class="min-w-0 text-center">
+                                            <span class="block text-[10px] font-extrabold tracking-wide text-slate-500">{{ coin.label }}</span>
+                                            <span class="block text-base font-black text-slate-800">{{ newItem.priceCoins[coin.key] }}</span>
+                                        </div>
+                                        <button @click="changeItemPrice(coin.key, 1)" type="button" class="w-8 h-9 shrink-0 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold" :aria-label="`Zvýšit hodnotu o 1 ${coin.label}`">&plus;</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="modalMode === 'add' && !newItem.isContainer" class="space-y-4 border-t border-slate-100 pt-5">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1.5">Počet kusů</label>
+                                <div class="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-1.5">
+                                    <button @click="changeNewItemQuantity(-1)" type="button" class="w-10 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xl font-bold" aria-label="Snížit množství">&minus;</button>
+                                    <span class="min-w-8 text-center text-lg font-black text-slate-800" aria-live="polite">{{ newItem.quantity }}</span>
+                                    <button @click="changeNewItemQuantity(1)" type="button" class="w-10 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xl font-bold" aria-label="Zvýšit množství">&plus;</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="checkbox" v-model="newItem.purchaseEnabled" class="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer">
+                                    <span class="text-sm font-bold text-slate-800">Nákup</span>
+                                </label>
+                                <button v-if="newItem.purchaseEnabled" @click="openPurchasePriceModal" type="button" class="px-3 py-2 text-sm font-bold text-emerald-800 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
+                                    Upravit cenu
+                                </button>
+                                <span v-if="newItem.purchaseEnabled" class="w-full text-xs text-slate-600">
+                                    {{ formatMd(getPurchaseUnitPriceMd()) }} za kus · celkem {{ formatMd(getPurchaseTotalMd()) }}
+                                </span>
                             </div>
                         </div>
 
@@ -453,6 +451,33 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         {{ modalMode === 'add' ? 'Uložit do inventáře' : 'Uložit změny' }}
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno vlastní nákupní ceny -->
+        <div v-if="isPurchasePriceModalOpen" class="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 class="font-extrabold text-lg text-slate-800">Nákupní cena za kus</h3>
+                    <button @click="isPurchasePriceModalOpen = false" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm" aria-label="Zavřít nastavení ceny">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <p class="text-sm text-slate-500 mb-4">Výchozí cena je hodnota předmětu. Zde můžete nastavit jinou cenu za jeden kus.</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div v-for="coin in [{ key: 'zl', label: 'ZL' }, { key: 'st', label: 'ST' }, { key: 'md', label: 'MD' }]" :key="coin.key" class="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <span class="text-xs font-extrabold tracking-wider text-slate-600">{{ coin.label }}</span>
+                            <button @click="changePurchasePrice(coin.key, 1)" type="button" class="w-10 h-10 rounded-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xl font-bold shadow-sm" :aria-label="`Přidat ${coin.label}`">&plus;</button>
+                            <span class="text-2xl font-black text-slate-800" aria-live="polite">{{ newItem.purchasePriceCoins[coin.key] }}</span>
+                            <button @click="changePurchasePrice(coin.key, -1)" type="button" class="w-10 h-10 rounded-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xl font-bold shadow-sm" :aria-label="`Odebrat ${coin.label}`">&minus;</button>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-center text-sm font-bold text-slate-700">Cena za kus: {{ formatMd(getPurchaseUnitPriceMd()) }}</p>
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="isPurchasePriceModalOpen = false" type="button" class="px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Hotovo</button>
                 </div>
             </div>
         </div>
@@ -559,13 +584,12 @@
             </div>
         </div>
 
-        <!-- Modální okno Kalkulačky peněz -->
+        <!-- Modální okno zisku nebo platby -->
         <div v-if="isMoneyModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
                 <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Kalkulačka měšce
+                        <span :class="moneyTransaction.type === 'add' ? 'text-emerald-600' : 'text-red-600'">{{ moneyTransaction.type === 'add' ? 'Zisk' : 'Platba' }}</span>
                     </h3>
                     <button @click="closeMoneyModal" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -573,32 +597,86 @@
                 </div>
                 
                 <div class="p-5">
-                    <div class="flex bg-slate-100 p-1 rounded-xl mb-5 border border-slate-200">
-                        <button @click="moneyTransaction.type = 'add'" class="flex-1 py-2 font-bold text-sm rounded-lg transition-colors" :class="moneyTransaction.type === 'add' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Přidat zisk</button>
-                        <button @click="moneyTransaction.type = 'sub'" class="flex-1 py-2 font-bold text-sm rounded-lg transition-colors" :class="moneyTransaction.type === 'sub' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Zadat útratu</button>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div v-for="coin in [{ key: 'zl', label: 'ZL' }, { key: 'st', label: 'ST' }, { key: 'md', label: 'MD' }]" :key="coin.key" class="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <label class="text-xs font-extrabold tracking-wider text-slate-600">{{ coin.label }}</label>
+                            <button @click="changeTransactionAmount(coin.key, 1)" type="button" class="w-10 h-10 rounded-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xl font-bold shadow-sm" :aria-label="`Přidat ${coin.label}`">&plus;</button>
+                            <span class="text-2xl font-black text-slate-800" aria-live="polite">{{ moneyTransaction[coin.key] }}</span>
+                            <button @click="changeTransactionAmount(coin.key, -1)" type="button" class="w-10 h-10 rounded-full bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xl font-bold shadow-sm" :aria-label="`Odebrat ${coin.label}`">&minus;</button>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="flex flex-col">
-                            <label class="text-xs font-bold text-amber-700 mb-1 text-center">ZL</label>
-                            <input type="number" min="0" v-model.number="moneyTransaction.zl" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-slate-800 outline-none">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-xs font-bold text-slate-500 mb-1 text-center">ST</label>
-                            <input type="number" min="0" v-model.number="moneyTransaction.st" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 font-bold text-slate-800 outline-none">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-xs font-bold text-orange-800 mb-1 text-center">MD</label>
-                            <input type="number" min="0" v-model.number="moneyTransaction.md" class="w-full text-center p-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 font-bold text-slate-800 outline-none">
-                        </div>
-                    </div>
+                    <label for="money-note" class="block text-sm font-bold text-slate-700 mt-5 mb-1.5">Poznámka <span class="font-normal text-slate-400">(volitelné)</span></label>
+                    <input id="money-note" type="text" v-model="moneyTransaction.note" maxlength="120" autocomplete="off" placeholder="Např. odměna za úkol" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white shadow-inner text-slate-800">
                 </div>
 
                 <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
                     <button @click="closeMoneyModal" type="button" class="px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
                     <button @click="executeMoneyTransaction" type="button" class="px-5 py-2.5 text-sm font-bold text-white rounded-xl transition shadow-sm flex items-center gap-2" :class="moneyTransaction.type === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'">
-                        {{ moneyTransaction.type === 'add' ? 'Přidat do měšce' : 'Odečíst z měšce' }}
+                        {{ moneyTransaction.type === 'add' ? 'Přidat zisk' : 'Potvrdit platbu' }}
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno podrobností měšce -->
+        <div v-if="isMoneyDetailsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 class="font-extrabold text-lg text-slate-800">Podrobnosti měšce</h3>
+                    <button @click="isMoneyDetailsModalOpen = false" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm" aria-label="Zavřít podrobnosti">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between items-center gap-4 text-sm">
+                            <dt class="text-slate-500 font-medium">Hodnota předmětů (na prodej)</dt>
+                            <dd class="text-slate-800 font-bold">{{ formatMd(itemsValueMd) }}</dd>
+                        </div>
+                        <div class="flex justify-between items-center gap-4 border-t border-slate-100 pt-3">
+                            <dt class="text-slate-800 font-black uppercase tracking-wide text-xs">Celkové jmění postavy</dt>
+                            <dd class="text-amber-600 font-black text-lg">{{ totalInventoryValueFormatted }}</dd>
+                        </div>
+                    </dl>
+
+                    <h4 class="mt-6 mb-3 border-t border-slate-100 pt-4 text-sm font-extrabold uppercase tracking-wide text-slate-700">Posledních 50 transakcí</h4>
+                    <div v-if="recentMoneyTransactions.length" class="space-y-2">
+                        <div v-for="transaction in recentMoneyTransactions" :key="transaction.id" class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <span :class="transaction.type === 'add' ? 'text-emerald-700' : 'text-red-700'" class="font-bold">{{ transaction.type === 'add' ? 'Zisk' : 'Platba' }}</span>
+                                    <span class="ml-2 font-bold text-slate-800">{{ formatTransactionAmount(transaction) }}</span>
+                                </div>
+                                <time class="shrink-0 text-right text-xs text-slate-500">{{ formatTransactionDate(transaction.createdAt) }}</time>
+                            </div>
+                            <p v-if="transaction.note" class="mt-1.5 text-sm text-slate-600 break-words">{{ transaction.note }}</p>
+                        </div>
+                    </div>
+                    <p v-else class="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Zatím zde nejsou žádné transakce.</p>
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                    <button @click="isMoneyDetailsModalOpen = false" type="button" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zavřít</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modální okno nastavení -->
+        <div v-if="isSettingsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out] border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 class="font-extrabold text-lg text-slate-800">Nastavení</h3>
+                    <button @click="isSettingsModalOpen = false" type="button" class="p-1.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-sm" aria-label="Zavřít nastavení">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <label for="character-capacity" class="block text-sm font-bold text-slate-700 mb-2">Nosnost postavy (lb)</label>
+                    <input id="character-capacity" type="number" min="1" v-model.number="settingsCharCapacity" @change="validateCharCapacity" class="w-full p-3 border border-slate-300 rounded-xl bg-white text-center font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner">
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button @click="isSettingsModalOpen = false" type="button" class="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition shadow-sm">Zrušit</button>
+                    <button @click="saveSettings" type="button" class="px-5 py-2 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition shadow-sm">Uložit</button>
                 </div>
             </div>
         </div>
@@ -631,8 +709,11 @@
                     modalMode: 'add',
                     newItem: {
                         id: null, name: '', note: '', weight: 0, price: '',
+                        priceCoins: { zl: 0, st: 0, md: 0 }, priceEdited: false, originalPrice: '',
+                        purchaseEnabled: false, purchasePriceOverride: false, purchasePriceCoins: { zl: 0, st: 0, md: 0 },
                         isContainer: false, maxCapacity: 30, containerId: null, isHung: false, quantity: 1
                     },
+                    isPurchasePriceModalOpen: false,
 
                     isMoveModalOpen: false,
                     itemToMove: null,
@@ -644,7 +725,11 @@
                     isDeleteCharModalOpen: false,
                     
                     isMoneyModalOpen: false,
-                    moneyTransaction: { type: 'add', zl: 0, st: 0, md: 0 },
+                    isMoneyDetailsModalOpen: false,
+                    moneyTransaction: { type: 'add', zl: 0, st: 0, md: 0, note: '' },
+
+                    isSettingsModalOpen: false,
+                    settingsCharCapacity: 150,
 
                     isErrorModalOpen: false,
                     errorMessage: '',
@@ -713,6 +798,10 @@
                 },
                 totalInventoryValueFormatted() {
                     return this.formatMd(this.pouchValueMd + this.itemsValueMd);
+                },
+                recentMoneyTransactions() {
+                    if (!this.activeCharacter || !Array.isArray(this.activeCharacter.moneyHistory)) return [];
+                    return this.activeCharacter.moneyHistory.slice(-50).reverse();
                 }
             },
             watch: {
@@ -721,6 +810,8 @@
                 'newItem.isContainer': function(newVal) {
                     if (newVal) {
                         this.newItem.containerId = null;
+                        this.newItem.purchaseEnabled = false;
+                        this.newItem.quantity = 1;
                     }
                 }
             },
@@ -764,6 +855,53 @@
                     if (md > 0) parts.push(`${md} md`);
                     return parts.join(' ');
                 },
+                coinsFromMd(totalMd) {
+                    const total = Math.max(0, Math.floor(Number(totalMd) || 0));
+                    const zl = Math.floor(total / 100);
+                    const rem = total % 100;
+                    return { zl, st: Math.floor(rem / 10), md: rem % 10 };
+                },
+                coinTotalMd(coins) {
+                    return coins.zl * 100 + coins.st * 10 + coins.md;
+                },
+                getItemPriceMd() {
+                    return this.coinTotalMd(this.newItem.priceCoins);
+                },
+                getPurchaseUnitPriceMd() {
+                    return this.newItem.purchasePriceOverride
+                        ? this.coinTotalMd(this.newItem.purchasePriceCoins)
+                        : this.getItemPriceMd();
+                },
+                getPurchaseTotalMd() {
+                    return this.getPurchaseUnitPriceMd() * this.newItem.quantity;
+                },
+                changeItemPrice(type, delta) {
+                    const next = this.newItem.priceCoins[type] + delta;
+                    if (next >= 0 && Number.isSafeInteger(next)) {
+                        this.newItem.priceCoins[type] = next;
+                        this.newItem.priceEdited = true;
+                    }
+                },
+                changePurchasePrice(type, delta) {
+                    const next = this.newItem.purchasePriceCoins[type] + delta;
+                    if (next >= 0 && Number.isSafeInteger(next)) {
+                        this.newItem.purchasePriceCoins[type] = next;
+                        this.newItem.purchasePriceOverride = true;
+                    }
+                },
+                changeNewItemQuantity(delta) {
+                    const next = this.newItem.quantity + delta;
+                    if (next >= 1 && Number.isSafeInteger(next)) {
+                        this.newItem.quantity = next;
+                    }
+                },
+                openPurchasePriceModal() {
+                    if (!this.newItem.purchasePriceOverride) {
+                        this.newItem.purchasePriceCoins = { ...this.newItem.priceCoins };
+                        this.newItem.purchasePriceOverride = true;
+                    }
+                    this.isPurchasePriceModalOpen = true;
+                },
                 
                 getDisplayWeight(item) {
                     const qty = item.isContainer ? 1 : (item.quantity !== undefined ? item.quantity : 1);
@@ -791,41 +929,29 @@
                     return item.price;
                 },
                 
-                changeMoney(type, delta) {
-                    if (!this.activeCharacter) return;
-                    let current = Number(this.activeCharacter.money[type]) || 0;
-                    let newVal = current + delta;
-                    if (newVal >= 0) {
-                        this.activeCharacter.money[type] = newVal;
-                    }
-                },
-                validateMoney(type) {
-                    if (!this.activeCharacter) return;
-                    let val = this.activeCharacter.money[type];
-                    if (val === '' || val === null || isNaN(val) || val < 0) {
-                        this.activeCharacter.money[type] = 0;
-                    } else {
-                        this.activeCharacter.money[type] = Math.floor(val);
-                    }
-                },
-
-                openMoneyModal() {
-                    this.moneyTransaction = { type: 'add', zl: 0, st: 0, md: 0 };
+                openMoneyModal(type) {
+                    this.moneyTransaction = { type, zl: 0, st: 0, md: 0, note: '' };
                     this.isMoneyModalOpen = true;
                 },
                 closeMoneyModal() {
                     this.isMoneyModalOpen = false;
                 },
+                changeTransactionAmount(type, delta) {
+                    const current = Number(this.moneyTransaction[type]) || 0;
+                    const next = current + delta;
+                    if (next >= 0 && Number.isSafeInteger(next)) {
+                        this.moneyTransaction[type] = next;
+                    }
+                },
                 executeMoneyTransaction() {
                     if (!this.activeCharacter) return;
                     
                     const currentTotal = this.pouchValueMd;
-                    const transactionTotal = (Number(this.moneyTransaction.zl) || 0) * 100 +
-                                             (Number(this.moneyTransaction.st) || 0) * 10 +
-                                             (Number(this.moneyTransaction.md) || 0);
+                    const { zl, st, md } = this.moneyTransaction;
+                    const transactionTotal = zl * 100 + st * 10 + md;
                     
                     if (transactionTotal === 0) {
-                        this.closeMoneyModal();
+                        this.showError("Zadejte alespoň jednu minci.");
                         return;
                     }
 
@@ -834,21 +960,62 @@
                         return;
                     }
 
-                    let newTotal = this.moneyTransaction.type === 'add' ? currentTotal + transactionTotal : currentTotal - transactionTotal;
+                    const newTotal = this.moneyTransaction.type === 'add' ? currentTotal + transactionTotal : currentTotal - transactionTotal;
+                    if (!Number.isSafeInteger(transactionTotal) || !Number.isSafeInteger(newTotal)) {
+                        this.showError("Zadaná částka je příliš vysoká.");
+                        return;
+                    }
                     
                     this.activeCharacter.money.zl = Math.floor(newTotal / 100);
                     let rem = newTotal % 100;
                     this.activeCharacter.money.st = Math.floor(rem / 10);
                     this.activeCharacter.money.md = Math.round(rem % 10);
+
+                    if (!Array.isArray(this.activeCharacter.moneyHistory)) {
+                        this.activeCharacter.moneyHistory = [];
+                    }
+                    this.activeCharacter.moneyHistory.push({
+                        id: this.generateId(),
+                        type: this.moneyTransaction.type,
+                        zl,
+                        st,
+                        md,
+                        note: this.moneyTransaction.note.trim(),
+                        createdAt: new Date().toISOString()
+                    });
                     
                     this.closeMoneyModal();
                 },
 
+                formatTransactionAmount(transaction) {
+                    const parts = [];
+                    if (transaction.zl) parts.push(`${transaction.zl} zl`);
+                    if (transaction.st) parts.push(`${transaction.st} st`);
+                    if (transaction.md) parts.push(`${transaction.md} md`);
+                    return parts.join(' ') || '0 md';
+                },
+                formatTransactionDate(value) {
+                    const date = new Date(value);
+                    return Number.isNaN(date.getTime()) ? 'Datum neuvedeno' : date.toLocaleString('cs-CZ');
+                },
+                openSettingsModal() {
+                    if (!this.activeCharacter) return;
+                    this.settingsCharCapacity = Number(this.activeCharacter.charCapacity) || 150;
+                    this.isSettingsModalOpen = true;
+                },
+                saveSettings() {
+                    if (!this.activeCharacter) return;
+                    this.validateCharCapacity();
+                    this.activeCharacter.charCapacity = this.settingsCharCapacity;
+                    this.isSettingsModalOpen = false;
+                },
                 validateCharCapacity() {
                     if (!this.activeCharacter) return;
-                    let val = this.activeCharacter.charCapacity;
+                    let val = this.settingsCharCapacity;
                     if (val === '' || val === null || isNaN(val) || val <= 0) {
-                        this.activeCharacter.charCapacity = 150; // fallback default
+                        this.settingsCharCapacity = 150;
+                    } else {
+                        this.settingsCharCapacity = Number(val);
                     }
                 },
 
@@ -901,17 +1068,31 @@
                     this.modalMode = 'add';
                     this.newItem = {
                         id: null, name: '', note: '', weight: 0, price: '',
+                        priceCoins: { zl: 0, st: 0, md: 0 }, priceEdited: false, originalPrice: '',
+                        purchaseEnabled: false, purchasePriceOverride: false, purchasePriceCoins: { zl: 0, st: 0, md: 0 },
                         isContainer: false, maxCapacity: 30, containerId: null, isHung: false, quantity: 1
                     };
+                    this.isPurchasePriceModalOpen = false;
                     this.isModalOpen = true;
                 },
                 openEditModal(item) {
                     this.modalMode = 'edit';
                     this.newItem = JSON.parse(JSON.stringify(item));
+                    const itemPriceMd = this.parseToMd(item.price);
+                    this.newItem.priceCoins = this.coinsFromMd(itemPriceMd === null ? 0 : itemPriceMd);
+                    this.newItem.priceEdited = false;
+                    this.newItem.originalPrice = item.price || '';
+                    this.newItem.purchaseEnabled = false;
+                    this.newItem.purchasePriceOverride = false;
+                    this.newItem.purchasePriceCoins = { ...this.newItem.priceCoins };
+                    const quantity = Number(this.newItem.quantity);
+                    this.newItem.quantity = Number.isSafeInteger(quantity) && quantity >= 0 ? quantity : 1;
+                    this.isPurchasePriceModalOpen = false;
                     this.isModalOpen = true;
                 },
                 closeModal() {
                     this.isModalOpen = false;
+                    this.isPurchasePriceModalOpen = false;
                 },
                 openMoveModal(item) {
                     this.itemToMove = item;
@@ -939,18 +1120,56 @@
                     if (this.newItem.isContainer) this.newItem.containerId = null;
 
                     if (this.modalMode === 'add') {
+                        const quantity = this.newItem.isContainer ? 1 : this.newItem.quantity;
+                        const itemPriceMd = this.getItemPriceMd();
+                        if (!Number.isSafeInteger(quantity) || quantity < 1 || !Number.isSafeInteger(itemPriceMd)) {
+                            this.showError("Zkontrolujte cenu a množství předmětu.");
+                            return;
+                        }
+                        const purchaseTotalMd = this.newItem.purchaseEnabled && !this.newItem.isContainer
+                            ? this.getPurchaseTotalMd()
+                            : 0;
+                        const currentPouchValueMd = this.pouchValueMd;
+                        if (!Number.isSafeInteger(purchaseTotalMd) || !Number.isSafeInteger(currentPouchValueMd)) {
+                            this.showError("Celková cena nákupu je příliš vysoká.");
+                            return;
+                        }
+                        if (purchaseTotalMd > currentPouchValueMd) {
+                            this.showError("Nemáte dostatek peněz v měšci na tento nákup.");
+                            return;
+                        }
+
                         const item = {
                             id: this.generateId(),
                             name: this.newItem.name.trim(),
                             note: this.newItem.note.trim(),
                             weight: Number(this.newItem.weight) || 0,
-                            price: this.newItem.price.trim(),
+                            price: this.formatMd(itemPriceMd),
                             isContainer: this.newItem.isContainer,
                             maxCapacity: this.newItem.isContainer ? (Number(this.newItem.maxCapacity) || 0) : 0,
                             containerId: this.newItem.containerId,
                             isHung: false,
-                            quantity: 1
+                            quantity
                         };
+
+                        if (purchaseTotalMd > 0) {
+                            const newPouchValueMd = currentPouchValueMd - purchaseTotalMd;
+                            this.activeCharacter.money.zl = Math.floor(newPouchValueMd / 100);
+                            const remainder = newPouchValueMd % 100;
+                            this.activeCharacter.money.st = Math.floor(remainder / 10);
+                            this.activeCharacter.money.md = remainder % 10;
+                            if (!Array.isArray(this.activeCharacter.moneyHistory)) {
+                                this.activeCharacter.moneyHistory = [];
+                            }
+                            const transactionCoins = this.coinsFromMd(purchaseTotalMd);
+                            this.activeCharacter.moneyHistory.push({
+                                id: this.generateId(),
+                                type: 'sub',
+                                ...transactionCoins,
+                                note: `Nákup: ${item.name}${quantity > 1 ? ` × ${quantity}` : ''}`,
+                                createdAt: new Date().toISOString()
+                            });
+                        }
                         this.activeCharacter.items.push(item);
                     } else if (this.modalMode === 'edit') {
                         const index = this.activeCharacter.items.findIndex(i => i.id === this.newItem.id);
@@ -959,7 +1178,9 @@
                             currentItem.name = this.newItem.name.trim();
                             currentItem.note = this.newItem.note.trim();
                             currentItem.weight = Number(this.newItem.weight) || 0;
-                            currentItem.price = this.newItem.price.trim();
+                            currentItem.price = this.newItem.priceEdited
+                                ? this.formatMd(this.getItemPriceMd())
+                                : this.newItem.originalPrice;
                             currentItem.isContainer = this.newItem.isContainer;
                             currentItem.maxCapacity = this.newItem.isContainer ? (Number(this.newItem.maxCapacity) || 0) : 0;
                             currentItem.containerId = this.newItem.containerId;
@@ -1055,6 +1276,7 @@
                             name: name,
                             charCapacity: 150,
                             money: { zl: 0, st: 0, md: 0 },
+                            moneyHistory: [],
                             items: []
                         };
                         this.characters.push(newChar);
@@ -1105,6 +1327,7 @@
                             importedChar.id = this.generateId();
                             importedChar.charCapacity = importedChar.charCapacity || 150;
                             importedChar.money = importedChar.money || { zl: 0, st: 0, md: 0 };
+                            importedChar.moneyHistory = Array.isArray(importedChar.moneyHistory) ? importedChar.moneyHistory : [];
                             
                             this.characters.push(importedChar);
                             this.activeCharId = importedChar.id;
@@ -1132,6 +1355,8 @@
                             const parsed = JSON.parse(savedData3);
                             this.characters = parsed.characters;
                             this.characters.forEach(char => {
+                                if (!char.money) char.money = { zl: 0, st: 0, md: 0 };
+                                if (!Array.isArray(char.moneyHistory)) char.moneyHistory = [];
                                 if(char.items) {
                                     char.items.forEach(i => {
                                         if(i.quantity === undefined) i.quantity = 1;
@@ -1156,6 +1381,7 @@
                                 name: 'Hlavní postava',
                                 charCapacity: parsed.charCapacity || 150,
                                 money: parsed.money || { zl: 0, st: 0, md: 0 },
+                                moneyHistory: [],
                                 items: (parsed.items || []).map(i => ({...i, quantity: i.quantity !== undefined ? i.quantity : 1}))
                             };
                             this.characters = [migratedChar];
@@ -1172,6 +1398,7 @@
                         name: 'Nová postava',
                         charCapacity: 150,
                         money: { zl: 0, st: 0, md: 0 },
+                        moneyHistory: [],
                         items: []
                     };
                     this.characters = [defaultChar];
